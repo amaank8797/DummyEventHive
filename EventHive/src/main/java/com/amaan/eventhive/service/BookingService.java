@@ -8,6 +8,8 @@ import com.amaan.eventhive.entity.User;
 import com.amaan.eventhive.repository.BookingRepository;
 import com.amaan.eventhive.repository.TicketTypeRepository;
 import com.amaan.eventhive.repository.UserRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,17 +35,30 @@ public class BookingService {
     public Booking createBooking(Long userId, BookingRequestDTO request) {
 
         User user = userRepository.findById(userId)
-                .orElse(null);
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "User not found"
+                        )
+                );
 
         TicketType ticketType = ticketTypeRepository
                 .findById(request.getTicketTypeId())
-                .orElse(null);
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Ticket type not found"
+                        )
+                );
 
         int availableTickets =
                 ticketType.getTotalQuantity() - ticketType.getQuantitySold();
 
         if (request.getQuantity() > availableTickets) {
-            return null;
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Not enough tickets available"
+            );
         }
 
         BigDecimal totalAmount = ticketType.getPrice()
@@ -63,7 +78,9 @@ public class BookingService {
         );
 
         ticketTypeRepository.save(ticketType);
+
         Booking savedBooking = bookingRepository.save(booking);
+
         return savedBooking;
     }
 

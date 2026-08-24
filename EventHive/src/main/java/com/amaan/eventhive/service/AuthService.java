@@ -8,6 +8,8 @@ import com.amaan.eventhive.dto.LoginResponseDTO;
 import com.amaan.eventhive.dto.UserResponseDTO;
 import com.amaan.eventhive.entity.User;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class AuthService {
@@ -30,19 +32,27 @@ public class AuthService {
                 .orElse(null);
 
         if (user == null) {
-            return null;
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Invalid email or password"
+            );
         }
 
         if (!passwordEncoder.matches(
                 request.getPassword(),
                 user.getPasswordHash())) {
-            return null;
+
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Invalid email or password"
+            );
         }
 
         String token = jwtUtil.generateToken(user.getEmail());
 
         return new LoginResponseDTO(token);
     }
+
     public UserResponseDTO registerUser(String email, String password) {
 
         String encodedPassword = passwordEncoder.encode(password);
