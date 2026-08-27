@@ -1,10 +1,10 @@
 package com.amaan.eventhive.service;
 
-
 import com.amaan.eventhive.dto.BookingRequestDTO;
 import com.amaan.eventhive.entity.Booking;
 import com.amaan.eventhive.entity.TicketType;
 import com.amaan.eventhive.entity.User;
+import com.amaan.eventhive.exception.ResourceNotFoundException;
 import com.amaan.eventhive.repository.BookingRepository;
 import com.amaan.eventhive.repository.TicketTypeRepository;
 import com.amaan.eventhive.repository.UserRepository;
@@ -19,22 +19,27 @@ import java.util.List;
 
 @Service
 public class BookingService {
+
     private final BookingRepository bookingRepository;
     private final TicketTypeRepository ticketTypeRepository;
     private final UserRepository userRepository;
 
-    public BookingService(BookingRepository bookingRepository,
-                          TicketTypeRepository ticketTypeRepository,
-                          UserRepository userRepository) {
+    public BookingService(
+            BookingRepository bookingRepository,
+            TicketTypeRepository ticketTypeRepository,
+            UserRepository userRepository) {
+
         this.bookingRepository = bookingRepository;
         this.ticketTypeRepository = ticketTypeRepository;
         this.userRepository = userRepository;
     }
 
     @Transactional
-    public Booking createBooking(Long userId, BookingRequestDTO request) {
+    public Booking createBooking(
+            String email,
+            BookingRequestDTO request) {
 
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() ->
                         new ResponseStatusException(
                                 HttpStatus.NOT_FOUND,
@@ -52,17 +57,24 @@ public class BookingService {
                 );
 
         int availableTickets =
-                ticketType.getTotalQuantity() - ticketType.getQuantitySold();
+                ticketType.getTotalQuantity()
+                        - ticketType.getQuantitySold();
 
         if (request.getQuantity() > availableTickets) {
+
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "Not enough tickets available"
             );
         }
 
-        BigDecimal totalAmount = ticketType.getPrice()
-                .multiply(BigDecimal.valueOf(request.getQuantity()));
+        BigDecimal totalAmount =
+                ticketType.getPrice()
+                        .multiply(
+                                BigDecimal.valueOf(
+                                        request.getQuantity()
+                                )
+                        );
 
         Booking booking = new Booking();
 
@@ -74,27 +86,55 @@ public class BookingService {
         booking.setStatus("CONFIRMED");
 
         ticketType.setQuantitySold(
-                ticketType.getQuantitySold() + request.getQuantity()
+                ticketType.getQuantitySold()
+                        + request.getQuantity()
         );
 
         ticketTypeRepository.save(ticketType);
 
-        Booking savedBooking = bookingRepository.save(booking);
-
-        return savedBooking;
+        return bookingRepository.save(booking);
     }
 
-    public List<Booking> getBookingsByUserId(Long userId) {
-        return bookingRepository.findByUser_Id(userId);
+    public List<Booking> getBookingsByEmail(String email) {
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "User not found"
+                        )
+                );
+
+        return bookingRepository.findByUser_Id(
+                user.getId()
+        );
     }
 
     @Transactional
-    public Booking cancelBooking(Long bookingId, Long userId) {
+    public Booking cancelBooking(
+            Long bookingId,
+            String email) {
 
-        Booking booking = bookingRepository.findById(bookingId)
+        Booking booking = bookingRepository
+                .findById(bookingId)
                 .orElse(null);
 
         if (booking == null) {
+            return null;
+        }
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "User not found"
+                        )
+                );
+
+        if (!booking.getUser()
+                .getId()
+                .equals(user.getId())) {
+
             return null;
         }
 
@@ -102,21 +142,20 @@ public class BookingService {
             return booking;
         }
 
-        if (!booking.getUser().getId().equals(userId)) {
-            return null;
-        }
-
         if (booking.getTicketType()
                 .getEvent()
                 .getEventDate()
-                .isBefore(java.time.LocalDateTime.now())) {
+                .isBefore(LocalDateTime.now())) {
+
             return null;
         }
 
-        TicketType ticketType = booking.getTicketType();
+        TicketType ticketType =
+                booking.getTicketType();
 
         ticketType.setQuantitySold(
-                ticketType.getQuantitySold() - booking.getQuantity()
+                ticketType.getQuantitySold()
+                        - booking.getQuantity()
         );
 
         booking.setStatus("CANCELLED");
@@ -124,5 +163,16 @@ public class BookingService {
         ticketTypeRepository.save(ticketType);
 
         return bookingRepository.save(booking);
+    }
+
+    public Booking getBookingById(Long bookingId) {
+
+        return bookingRepository.findById(bookingId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Booking not found with id: "
+                                        + bookingId
+                        )
+                );
     }
 }

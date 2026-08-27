@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>EventHive SOAP Tester</title>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f7fa;
+            margin: 0;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            margin-top: 0;
+        }
+
+        .request-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        input {
+            padding: 10px;
+            width: 150px;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .result {
+            margin-top: 30px;
+        }
+
+        .booking-details {
+            display: grid;
+            grid-template-columns: 180px 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .label {
+            font-weight: bold;
+        }
+
+        .value {
+            color: #333;
+        }
+
+        .error {
+            color: #b00020;
+            font-weight: bold;
+        }
+
+        details {
+            margin-top: 30px;
+        }
+
+        pre {
+            background: #1e1e1e;
+            color: #eee;
+            padding: 20px;
+            border-radius: 6px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>EventHive SOAP API</h1>
+
+    <p>Get Booking Details</p>
+
+    <div class="request-box">
+
+        <label for="bookingId">
+            Booking ID:
+        </label>
+
+        <input
+                type="number"
+                id="bookingId"
+                value="1"
+                min="1"
+        >
+
+        <button onclick="getBooking()">
+            Get Booking
+        </button>
+
+    </div>
+
+
+    <div class="result">
+
+        <h2>Booking Details</h2>
+
+        <div id="bookingDetails">
+            No request sent yet.
+        </div>
+
+    </div>
+
+
+    <details>
+
+        <summary>
+            Raw SOAP Response
+        </summary>
+
+        <pre id="rawResponse">
+No response yet.
+        </pre>
+
+    </details>
+
+</div>
+
+
+<script>
+
+    async function getBooking() {
+
+        const bookingId =
+            document.getElementById("bookingId").value;
+
+        const bookingDetails =
+            document.getElementById("bookingDetails");
+
+        const rawResponse =
+            document.getElementById("rawResponse");
+
+
+        if (!bookingId) {
+
+            bookingDetails.innerHTML =
+                '<p class="error">Please enter a booking ID.</p>';
+
+            return;
+        }
+
+
+        bookingDetails.innerHTML =
+            "<p>Loading...</p>";
+
+        rawResponse.textContent =
+            "Sending SOAP request...";
+
+
+        const soapRequest = `
+<soapenv:Envelope
+    xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:book="http://eventhive.com/booking">
+
+    <soapenv:Header/>
+
+    <soapenv:Body>
+
+        <book:GetBookingRequest>
+            <book:bookingId>${bookingId}</book:bookingId>
+        </book:GetBookingRequest>
+
+    </soapenv:Body>
+
+</soapenv:Envelope>`;
+
+
+        try {
+
+            const response = await fetch("/ws", {
+
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "text/xml"
+                },
+
+                body: soapRequest
+
+            });
+
+
+            const responseText =
+                await response.text();
+
+
+            rawResponse.textContent =
+                formatXml(responseText);
+
+
+            /*
+             * Parse SOAP XML
+             */
+
+            const parser =
+                new DOMParser();
+
+            const xml =
+                parser.parseFromString(
+                    responseText,
+                    "text/xml"
+                );
+
+
+            /*
+             * Check for SOAP Fault
+             */
+
+            const fault =
+                xml.getElementsByTagNameNS(
+                    "http://schemas.xmlsoap.org/soap/envelope/",
+                    "Fault"
+                )[0];
+
+
+            if (fault) {
+
+                const faultString =
+                    fault.getElementsByTagName(
+                        "faultstring"
+                    )[0];
+
+                const message =
+                    faultString
+                        ? faultString.textContent
+                        : "SOAP request failed.";
+
+                bookingDetails.innerHTML =
+                    `<p class="error">${message}</p>`;
+
+                return;
+            }
+
+
+            /*
+             * Get SOAP response
+             */
+
+            const getValue = (name) => {
+
+                const element =
+                    xml.getElementsByTagName(name)[0];
+
+                return element
+                    ? element.textContent
+                    : "-";
+            };
+
+
+            const result = {
+
+                bookingId:
+                    getValue("bookingId"),
+
+                userId:
+                    getValue("userId"),
+
+                ticketTypeId:
+                    getValue("ticketTypeId"),
+
+                quantity:
+                    getValue("quantity"),
+
+                totalAmount:
+                    getValue("totalAmount"),
+
+                bookingDate:
+                    getValue("bookingDate"),
+
+                status:
+                    getValue("status")
+
+            };
+
+
+            /*
+             * Display booking
+             */
+
+            bookingDetails.innerHTML = `
+
+                <div class="booking-details">
+
+                    <div class="label">
+                        Booking ID
+                    </div>
+
+                    <div class="value">
+                        ${result.bookingId}
+                    </div>
+
+
+                    <div class="label">
+                        User ID
+                    </div>
+
+                    <div class="value">
+                        ${result.userId}
+                    </div>
+
+
+                    <div class="label">
+                        Ticket Type ID
+                    </div>
+
+                    <div class="value">
+                        ${result.ticketTypeId}
+                    </div>
+
+
+                    <div class="label">
+                        Quantity
+                    </div>
+
+                    <div class="value">
+                        ${result.quantity}
+                    </div>
+
+
+                    <div class="label">
+                        Total Amount
+                    </div>
+
+                    <div class="value">
+                        ${result.totalAmount}
+                    </div>
+
+
+                    <div class="label">
+                        Booking Date
+                    </div>
+
+                    <div class="value">
+                        ${result.bookingDate}
+                    </div>
+
+
+                    <div class="label">
+                        Status
+                    </div>
+
+                    <div class="value">
+                        ${result.status}
+                    </div>
+
+                </div>
+
+            `;
+
+        } catch (error) {
+
+            bookingDetails.innerHTML =
+                `<p class="error">
+                    Error: ${error.message}
+                </p>`;
+
+            rawResponse.textContent =
+                error.toString();
+
+        }
+
+    }
+
+
+    /*
+     * Format XML for display
+     */
+
+    function formatXml(xml) {
+
+        const formatted =
+            xml.replace(
+                />\s*</g,
+                ">\n<"
+            );
+
+        return formatted;
+    }
+
+</script>
+
+</body>
+
+</html>

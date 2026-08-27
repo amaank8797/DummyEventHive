@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<xs:schema
+        xmlns:xs="http://www.w3.org/2001/XMLSchema"
+        targetNamespace="http://eventhive.com/booking"
+        xmlns:tns="http://eventhive.com/booking"
+        elementFormDefault="qualified">
+
+    <xs:element name="GetBookingRequest">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="bookingId" type="xs:long"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="GetBookingResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="bookingId" type="xs:long"/>
+                <xs:element name="userId" type="xs:long"/>
+                <xs:element name="ticketTypeId" type="xs:long"/>
+                <xs:element name="quantity" type="xs:int"/>
+                <xs:element name="totalAmount" type="xs:decimal"/>
+                <xs:element name="bookingDate" type="xs:dateTime"/>
+                <xs:element name="status" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

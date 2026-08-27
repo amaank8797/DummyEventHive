@@ -4,6 +4,7 @@ import com.amaan.eventhive.dto.BookingRequestDTO;
 import com.amaan.eventhive.entity.Booking;
 import com.amaan.eventhive.service.BookingService;
 import javax.validation.Valid;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,24 +21,30 @@ public class BookingController {
 
     @PostMapping
     public Booking createBooking(
-            @RequestParam Long userId,
+            Authentication authentication,
             @RequestBody @Valid BookingRequestDTO request) {
 
-        return bookingService.createBooking(userId, request);
+        String email = authentication.getName();
+
+        return bookingService.createBooking(email, request);
     }
 
-    @GetMapping("/user/{userId}")
-    public List<Booking> getBookingsByUserId(
-            @PathVariable Long userId) {
+    @GetMapping("/my")
+    public List<Booking> getMyBookings(
+            Authentication authentication) {
 
-        return bookingService.getBookingsByUserId(userId);
+        String email = authentication.getName();
+
+        return bookingService.getBookingsByEmail(email);
     }
 
     @PutMapping("/{bookingId}/cancel")
     public Booking cancelBooking(
             @PathVariable Long bookingId,
-            @RequestParam Long userId) {
+            Authentication authentication) {
 
-        return bookingService.cancelBooking(bookingId, userId);
+        String email = authentication.getName();
+
+        return bookingService.cancelBooking(bookingId, email);
     }
 }

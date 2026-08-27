@@ -7,6 +7,7 @@ com/amaan/eventhive/service/TicketTypeService.class
 com/amaan/eventhive/repository/EventRepository.class
 com/amaan/eventhive/dto/TicketTypeResponseDTO.class
 com/amaan/eventhive/dto/LoginResponseDTO.class
+com/amaan/eventhive/soap/GetBookingResponse.class
 com/amaan/eventhive/controller/EventController.class
 com/amaan/eventhive/config/SecurityConfig.class
 com/amaan/eventhive/service/AuthService.class
@@ -20,6 +21,7 @@ com/amaan/eventhive/entity/Event.class
 com/amaan/eventhive/config/OpenAPIConfig.class
 com/amaan/eventhive/repository/BookingRepository.class
 com/amaan/eventhive/dto/BookingResponseDTO.class
+com/amaan/eventhive/soap/GetBookingRequest.class
 com/amaan/eventhive/service/UserService.class
 com/amaan/eventhive/entity/TicketType.class
 com/amaan/eventhive/controller/AuthController.class

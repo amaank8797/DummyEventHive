@@ -20,8 +20,7 @@ public class TicketTypeController {
     }
 
     @GetMapping("/{eventId}/ticket-types")
-    public List<TicketType> getTicketTypesByEventId(
-            @PathVariable Long eventId) {
+    public List<TicketType> getTicketTypesByEventId(@PathVariable Long eventId) {
 
         return ticketTypeService.getTicketTypesByEventId(eventId);
     }
