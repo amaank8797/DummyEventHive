@@ -18,16 +18,32 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleResourceNotFound(
             ResourceNotFoundException ex) {
 
-        Map<String, Object> error = new HashMap<>();
+        return buildErrorResponse(
+                HttpStatus.NOT_FOUND,
+                "Not Found",
+                ex.getMessage()
+        );
+    }
 
-        error.put("timestamp", LocalDateTime.now());
-        error.put("status", HttpStatus.NOT_FOUND.value());
-        error.put("error", "Not Found");
-        error.put("message", ex.getMessage());
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<Map<String, Object>> handleBusinessException(
+            BusinessException ex) {
 
-        return new ResponseEntity<>(
-                error,
-                HttpStatus.NOT_FOUND
+        return buildErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                "Bad Request",
+                ex.getMessage()
+        );
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<Map<String, Object>> handleForbiddenException(
+            ForbiddenException ex) {
+
+        return buildErrorResponse(
+                HttpStatus.FORBIDDEN,
+                "Forbidden",
+                ex.getMessage()
         );
     }
 
@@ -35,24 +51,48 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleValidationErrors(
             MethodArgumentNotValidException ex) {
 
-        Map<String, Object> error = new HashMap<>();
-
         String messages = ex.getBindingResult()
                 .getFieldErrors()
                 .stream()
                 .map(fieldError ->
-                        fieldError.getField() + ": "
+                        fieldError.getField()
+                                + ": "
                                 + fieldError.getDefaultMessage())
                 .collect(Collectors.joining(", "));
 
-        error.put("timestamp", LocalDateTime.now());
-        error.put("status", HttpStatus.BAD_REQUEST.value());
-        error.put("error", "Bad Request");
-        error.put("message", messages);
+        return buildErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                "Bad Request",
+                messages
+        );
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleGenericException(
+            Exception ex) {
+
+        return buildErrorResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "Internal Server Error",
+                "An unexpected error occurred"
+        );
+    }
+
+    private ResponseEntity<Map<String, Object>> buildErrorResponse(
+            HttpStatus status,
+            String error,
+            String message) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        response.put("timestamp", LocalDateTime.now());
+        response.put("status", status.value());
+        response.put("error", error);
+        response.put("message", message);
 
         return new ResponseEntity<>(
-                error,
-                HttpStatus.BAD_REQUEST
+                response,
+                status
         );
     }
 }

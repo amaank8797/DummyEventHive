@@ -4,6 +4,8 @@ import com.amaan.eventhive.dto.BookingRequestDTO;
 import com.amaan.eventhive.entity.Booking;
 import com.amaan.eventhive.entity.TicketType;
 import com.amaan.eventhive.entity.User;
+import com.amaan.eventhive.exception.BusinessException;
+import com.amaan.eventhive.exception.ForbiddenException;
 import com.amaan.eventhive.exception.ResourceNotFoundException;
 import com.amaan.eventhive.repository.BookingRepository;
 import com.amaan.eventhive.repository.TicketTypeRepository;
@@ -41,8 +43,7 @@ public class BookingService {
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() ->
-                        new ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
+                        new ResourceNotFoundException(
                                 "User not found"
                         )
                 );
@@ -50,8 +51,7 @@ public class BookingService {
         TicketType ticketType = ticketTypeRepository
                 .findById(request.getTicketTypeId())
                 .orElseThrow(() ->
-                        new ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
+                        new ResourceNotFoundException(
                                 "Ticket type not found"
                         )
                 );
@@ -62,8 +62,7 @@ public class BookingService {
 
         if (request.getQuantity() > availableTickets) {
 
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
+            throw new BusinessException(
                     "Not enough tickets available"
             );
         }
@@ -120,7 +119,9 @@ public class BookingService {
                 .orElse(null);
 
         if (booking == null) {
-            return null;
+            throw new ResourceNotFoundException(
+                    "Booking not found with id: " + bookingId
+            );
         }
 
         User user = userRepository.findByEmail(email)
@@ -135,8 +136,11 @@ public class BookingService {
                 .getId()
                 .equals(user.getId())) {
 
-            return null;
+            throw new ForbiddenException(
+                    "You are not allowed to cancel this booking"
+            );
         }
+
 
         if ("CANCELLED".equals(booking.getStatus())) {
             return booking;
@@ -147,7 +151,9 @@ public class BookingService {
                 .getEventDate()
                 .isBefore(LocalDateTime.now())) {
 
-            return null;
+            throw new BusinessException(
+                    "Cannot cancel a booking for an event that has already occurred"
+            );
         }
 
         TicketType ticketType =
